@@ -11,6 +11,7 @@ export type AnimationGeneratorType = 'free' | 'replicate' | 'gemini';
 interface AnimationFormProps {
   onGenerate: (type: AnimationGeneratorType, concept: string, frames: number, referenceImage?: File) => void;
   isLoading: boolean;
+  onTypeChange?: () => void;
 }
 
 const generators = [
@@ -19,7 +20,7 @@ const generators = [
   { id: 'gemini' as const, title: 'Gemini Animation', description: 'With optional image reference', icon: Bot, maxFrames: 4 },
 ];
 
-export function AnimationForm({ onGenerate, isLoading }: AnimationFormProps) {
+export function AnimationForm({ onGenerate, isLoading, onTypeChange }: AnimationFormProps) {
   const [selectedType, setSelectedType] = useState<AnimationGeneratorType>('free');
   const [concept, setConcept] = useState('');
   const [frames, setFrames] = useState(2);
@@ -66,6 +67,7 @@ export function AnimationForm({ onGenerate, isLoading }: AnimationFormProps) {
               onClick={() => {
                 setSelectedType(gen.id);
                 if (frames > gen.maxFrames) setFrames(gen.maxFrames);
+                onTypeChange?.();
               }}
               badge={gen.badge}
             />

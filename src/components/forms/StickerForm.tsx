@@ -12,6 +12,7 @@ export type StickerGeneratorType = 'free' | 'replicate' | 'gemini';
 interface StickerFormProps {
   onGenerate: (type: StickerGeneratorType, prompt: string, animation: string, referenceImage?: File) => void;
   isLoading: boolean;
+  onTypeChange?: () => void;
 }
 
 const generators = [
@@ -23,7 +24,7 @@ const generators = [
 const freeAnimations: AnimationType[] = ['float', 'bounce', 'pulse', 'wiggle', 'static'];
 const replicateAnimations: ReplicateAnimationType[] = ['bounce', 'shake', 'pulse', 'wiggle', 'static'];
 
-export function StickerForm({ onGenerate, isLoading }: StickerFormProps) {
+export function StickerForm({ onGenerate, isLoading, onTypeChange }: StickerFormProps) {
   const [selectedType, setSelectedType] = useState<StickerGeneratorType>('free');
   const [prompt, setPrompt] = useState('');
   const [animation, setAnimation] = useState('float');
@@ -69,6 +70,7 @@ export function StickerForm({ onGenerate, isLoading }: StickerFormProps) {
               onClick={() => {
                 setSelectedType(gen.id);
                 setAnimation(gen.id === 'replicate' ? 'bounce' : 'float');
+                onTypeChange?.();
               }}
               badge={gen.badge}
             />

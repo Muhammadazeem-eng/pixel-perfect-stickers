@@ -41,6 +41,13 @@ export default function Index() {
     setHistory(getHistory());
   }, []);
 
+  const resetPreview = useCallback(() => {
+    setPreviewUrl(null);
+    setCurrentBlob(null);
+    setTaskId(null);
+    setIsLoading(false);
+  }, []);
+
   const handleResult = (result: GenerationResult, type: 'sticker' | 'animation' | 'video', subType: string, prompt: string) => {
     setPreviewUrl(result.url);
     setCurrentBlob(result.blob);
@@ -199,7 +206,10 @@ export default function Index() {
       <main className="container px-4 md:px-6 py-6 space-y-6">
         {/* Tab Navigation */}
         <div className="flex justify-center">
-          <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
+          <TabNavigation activeTab={activeTab} onTabChange={(tab) => {
+            setActiveTab(tab);
+            resetPreview();
+          }} />
         </div>
 
         {/* Main Content */}
@@ -207,10 +217,10 @@ export default function Index() {
           {/* Input Form */}
           <div className="p-6 rounded-xl border border-border bg-card/50 backdrop-blur-sm">
             {activeTab === 'stickers' && (
-              <StickerForm onGenerate={handleStickerGenerate} isLoading={isLoading} />
+              <StickerForm onGenerate={handleStickerGenerate} isLoading={isLoading} onTypeChange={resetPreview} />
             )}
             {activeTab === 'animations' && (
-              <AnimationForm onGenerate={handleAnimationGenerate} isLoading={isLoading} />
+              <AnimationForm onGenerate={handleAnimationGenerate} isLoading={isLoading} onTypeChange={resetPreview} />
             )}
             {activeTab === 'premium' && (
               <PremiumVideoForm onGenerate={handlePremiumGenerate} isLoading={isLoading} />
