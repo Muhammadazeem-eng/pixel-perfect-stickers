@@ -12,6 +12,7 @@ export type StickerGeneratorType = 'free' | 'replicate' | 'gemini';
 interface StickerFormProps {
   onGenerate: (type: StickerGeneratorType, prompt: string, animation: string, referenceImage?: File) => void;
   isLoading: boolean;
+  onTypeChange?: () => void;
 }
 
 const generators = [

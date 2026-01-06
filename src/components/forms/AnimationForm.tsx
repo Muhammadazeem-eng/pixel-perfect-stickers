@@ -11,6 +11,7 @@ export type AnimationGeneratorType = 'free' | 'replicate' | 'gemini';
 interface AnimationFormProps {
   onGenerate: (type: AnimationGeneratorType, concept: string, frames: number, referenceImage?: File) => void;
   isLoading: boolean;
+  onTypeChange?: () => void;
 }
 
 const generators = [
