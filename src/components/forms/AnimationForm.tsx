@@ -20,7 +20,7 @@ const generators = [
   { id: 'gemini' as const, title: 'Gemini Animation', description: 'With optional image reference', icon: Bot, maxFrames: 4 },
 ];
 
-export function AnimationForm({ onGenerate, isLoading }: AnimationFormProps) {
+export function AnimationForm({ onGenerate, isLoading, onTypeChange }: AnimationFormProps) {
   const [selectedType, setSelectedType] = useState<AnimationGeneratorType>('free');
   const [concept, setConcept] = useState('');
   const [frames, setFrames] = useState(2);

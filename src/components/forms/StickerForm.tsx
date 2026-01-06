@@ -24,7 +24,7 @@ const generators = [
 const freeAnimations: AnimationType[] = ['float', 'bounce', 'pulse', 'wiggle', 'static'];
 const replicateAnimations: ReplicateAnimationType[] = ['bounce', 'shake', 'pulse', 'wiggle', 'static'];
 
-export function StickerForm({ onGenerate, isLoading }: StickerFormProps) {
+export function StickerForm({ onGenerate, isLoading, onTypeChange }: StickerFormProps) {
   const [selectedType, setSelectedType] = useState<StickerGeneratorType>('free');
   const [prompt, setPrompt] = useState('');
   const [animation, setAnimation] = useState('float');
