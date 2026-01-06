@@ -41,6 +41,13 @@ export default function Index() {
     setHistory(getHistory());
   }, []);
 
+  const resetPreview = useCallback(() => {
+    setPreviewUrl(null);
+    setCurrentBlob(null);
+    setTaskId(null);
+    setIsLoading(false);
+  }, []);
+
   const handleResult = (result: GenerationResult, type: 'sticker' | 'animation' | 'video', subType: string, prompt: string) => {
     setPreviewUrl(result.url);
     setCurrentBlob(result.blob);
