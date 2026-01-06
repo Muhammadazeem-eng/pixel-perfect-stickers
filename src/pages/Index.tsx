@@ -206,7 +206,10 @@ export default function Index() {
       <main className="container px-4 md:px-6 py-6 space-y-6">
         {/* Tab Navigation */}
         <div className="flex justify-center">
-          <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
+          <TabNavigation activeTab={activeTab} onTabChange={(tab) => {
+            setActiveTab(tab);
+            resetPreview();
+          }} />
         </div>
 
         {/* Main Content */}
