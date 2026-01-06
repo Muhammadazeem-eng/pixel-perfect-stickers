@@ -214,10 +214,10 @@ export default function Index() {
           {/* Input Form */}
           <div className="p-6 rounded-xl border border-border bg-card/50 backdrop-blur-sm">
             {activeTab === 'stickers' && (
-              <StickerForm onGenerate={handleStickerGenerate} isLoading={isLoading} />
+              <StickerForm onGenerate={handleStickerGenerate} isLoading={isLoading} onTypeChange={resetPreview} />
             )}
             {activeTab === 'animations' && (
-              <AnimationForm onGenerate={handleAnimationGenerate} isLoading={isLoading} />
+              <AnimationForm onGenerate={handleAnimationGenerate} isLoading={isLoading} onTypeChange={resetPreview} />
             )}
             {activeTab === 'premium' && (
               <PremiumVideoForm onGenerate={handlePremiumGenerate} isLoading={isLoading} />
