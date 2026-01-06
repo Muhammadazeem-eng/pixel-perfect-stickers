@@ -59,6 +59,8 @@ export default function Index() {
       subType,
       prompt,
       thumbnail: result.url,
+      downloadUrl: result.url,
+      taskId: result.taskId,
     });
     refreshHistory();
 
@@ -156,7 +158,9 @@ export default function Index() {
         type: 'video',
         subType: 'premium',
         prompt,
-        thumbnail: result.url, // This won't work well for video, but ok for now
+        thumbnail: result.url,
+        downloadUrl: result.url,
+        taskId: result.taskId,
       });
       refreshHistory();
 

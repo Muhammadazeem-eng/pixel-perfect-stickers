@@ -15,6 +15,8 @@ export interface HistoryItem {
   subType: string;
   prompt: string;
   thumbnail: string;
+  downloadUrl: string;
+  taskId?: string; // For premium video transparent download
   timestamp: Date;
 }
 
