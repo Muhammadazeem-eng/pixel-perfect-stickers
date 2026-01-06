@@ -67,6 +67,7 @@ export function AnimationForm({ onGenerate, isLoading, onTypeChange }: Animation
               onClick={() => {
                 setSelectedType(gen.id);
                 if (frames > gen.maxFrames) setFrames(gen.maxFrames);
+                onTypeChange?.();
               }}
               badge={gen.badge}
             />

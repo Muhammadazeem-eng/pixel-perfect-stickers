@@ -70,6 +70,7 @@ export function StickerForm({ onGenerate, isLoading, onTypeChange }: StickerForm
               onClick={() => {
                 setSelectedType(gen.id);
                 setAnimation(gen.id === 'replicate' ? 'bounce' : 'float');
+                onTypeChange?.();
               }}
               badge={gen.badge}
             />
