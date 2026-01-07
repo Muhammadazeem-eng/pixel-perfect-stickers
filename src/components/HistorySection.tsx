@@ -107,12 +107,26 @@ export function HistorySection({ history, onRefresh }: HistorySectionProps) {
               className="flex-shrink-0 w-36 p-2 rounded-lg border bg-card hover:border-primary/50 transition-colors group cursor-pointer"
               onClick={() => setSelectedItem(item)}
             >
-              <div className="aspect-square rounded-md overflow-hidden bg-secondary/50 mb-2 checkered-bg">
-                <img
-                  src={item.thumbnail}
-                  alt={item.prompt}
-                  className="w-full h-full object-contain"
-                />
+              <div className="aspect-square rounded-md overflow-hidden bg-secondary/50 mb-2 checkered-bg flex items-center justify-center">
+                {item.type === 'video' ? (
+                  <video
+                    src={item.thumbnail}
+                    muted
+                    loop
+                    onMouseOver={(e) => e.currentTarget.play()}
+                    onMouseOut={(e) => {
+                      e.currentTarget.pause();
+                      e.currentTarget.currentTime = 0;
+                    }}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <img
+                    src={item.thumbnail}
+                    alt={item.prompt}
+                    className="w-full h-full object-contain"
+                  />
+                )}
               </div>
               <div className="space-y-1.5">
                 <div className="flex items-center gap-1">
@@ -162,28 +176,40 @@ export function HistorySection({ history, onRefresh }: HistorySectionProps) {
               <CardContainer className="inter-var">
                 <CardBody className="bg-card relative group/card dark:hover:shadow-2xl dark:hover:shadow-emerald-500/[0.1] dark:bg-black dark:border-white/[0.2] border-black/[0.1] w-auto sm:w-[30rem] h-auto rounded-xl p-6 border">
 
-                  <CardItem
-                    translateZ="50"
-                    className="text-xl font-bold text-foreground dark:text-white"
-                  >
-                    {selectedItem.prompt}
-                  </CardItem>
-                  <CardItem
-                    as="p"
-                    translateZ="60"
-                    className="text-muted-foreground text-sm max-w-sm mt-2 dark:text-neutral-300"
-                  >
-                    {selectedItem.type.toUpperCase()} • {selectedItem.subType}
-                  </CardItem>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <CardItem
+                        translateZ="50"
+                        className="text-xl font-bold text-foreground dark:text-white"
+                      >
+                        {selectedItem.prompt}
+                      </CardItem>
+                      <CardItem
+                        as="p"
+                        translateZ="60"
+                        className="text-muted-foreground text-sm max-w-sm mt-2 dark:text-neutral-300"
+                      >
+                        {selectedItem.type.toUpperCase()} • {selectedItem.subType}
+                      </CardItem>
+                    </div>
+                  </div>
+
                   <CardItem translateZ="100" className="w-full mt-4">
-                    <div className="aspect-square rounded-xl overflow-hidden bg-secondary/50 checkered-bg relative group-hover/card:shadow-xl">
-                      <img
-                        src={selectedItem.thumbnail}
-                        height="1000"
-                        width="1000"
-                        className="h-full w-full object-contain rounded-xl group-hover/card:shadow-xl"
-                        alt="thumbnail"
-                      />
+                    <div className="aspect-square rounded-xl overflow-hidden bg-secondary/50 checkered-bg relative group-hover/card:shadow-xl flex items-center justify-center">
+                      {selectedItem.type === 'video' ? (
+                        <video
+                          src={selectedItem.thumbnail}
+                          controls
+                          loop
+                          className="max-w-full max-h-full object-contain rounded-xl shadow-xl"
+                        />
+                      ) : (
+                        <img
+                          src={selectedItem.thumbnail}
+                          className="h-full w-full object-contain rounded-xl group-hover/card:shadow-xl"
+                          alt="thumbnail"
+                        />
+                      )}
                     </div>
                   </CardItem>
                   <div className="flex justify-between items-center mt-20">
@@ -199,17 +225,6 @@ export function HistorySection({ history, onRefresh }: HistorySectionProps) {
                       Close
                     </CardItem>
                     <div className="flex gap-2">
-                      <CardItem
-                        translateZ={20}
-                        as="button"
-                        className="px-4 py-2 rounded-xl bg-black dark:bg-white dark:text-black text-white text-xs font-bold"
-                        onClick={(e: React.MouseEvent) => {
-                          e.stopPropagation();
-                          handleDownload(selectedItem);
-                        }}
-                      >
-                        {selectedItem.type === 'video' ? 'Download MP4' : 'Download WebP'}
-                      </CardItem>
                       {selectedItem.type === 'video' && selectedItem.taskId && (
                         <CardItem
                           translateZ={20}
@@ -220,9 +235,20 @@ export function HistorySection({ history, onRefresh }: HistorySectionProps) {
                             handleDownloadTransparent(selectedItem);
                           }}
                         >
-                          Trans
+                          Download WebP
                         </CardItem>
                       )}
+                      <CardItem
+                        translateZ={20}
+                        as="button"
+                        className="px-4 py-2 rounded-xl bg-black dark:bg-white dark:text-black text-white text-xs font-bold"
+                        onClick={(e: React.MouseEvent) => {
+                          e.stopPropagation();
+                          handleDownload(selectedItem);
+                        }}
+                      >
+                        Download {selectedItem.type === 'video' ? 'MP4' : 'WebP'}
+                      </CardItem>
                     </div>
                   </div>
                 </CardBody>

@@ -51,6 +51,8 @@ export default function Index() {
     url: string | null;
     blob: Blob | null;
     taskId: string | null;
+    transparentUrl?: string | null;
+    transparentBlob?: Blob | null;
   }>>({
     stickers_free: { url: null, blob: null, taskId: null },
     stickers_replicate: { url: null, blob: null, taskId: null },
@@ -58,7 +60,8 @@ export default function Index() {
     animations_free: { url: null, blob: null, taskId: null },
     animations_replicate: { url: null, blob: null, taskId: null },
     animations_gemini: { url: null, blob: null, taskId: null },
-    premium_premium: { url: null, blob: null, taskId: null },
+
+    premium_premium: { url: null, blob: null, taskId: null, transparentUrl: null, transparentBlob: null },
   });
 
   const [history, setHistory] = useState<HistoryItem[]>([]);
@@ -262,9 +265,33 @@ export default function Index() {
         premium_premium: {
           url: result.url,
           blob: result.blob,
-          taskId: result.taskId || null
+          taskId: result.taskId || null,
+          transparentUrl: null,
+          transparentBlob: null,
         }
       }));
+
+      // Automatically fetch transparent version
+      if (result.taskId) {
+        setLoadingMessage('Generating transparent version...');
+        try {
+          const transResult = await getTransparentVideo(result.taskId, signal);
+          if (isLatest(requestId)) {
+            setTabResults(prev => ({
+              ...prev,
+              premium_premium: {
+                ...prev.premium_premium,
+                transparentUrl: transResult.url,
+                transparentBlob: transResult.blob,
+              }
+            }));
+            toast.success('Transparent version ready!');
+          }
+        } catch (error) {
+          console.error('Failed to auto-fetch transparent video:', error);
+          // Don't fail the whole flow, just log it. MP4 is still good.
+        }
+      }
 
       addToHistory({
         type: 'video',
@@ -319,7 +346,11 @@ export default function Index() {
       const result = await getTransparentVideo(current.taskId, signal);
       if (!isLatest(requestId)) return;
 
-      downloadBlob(result.blob, 'sticker_transparent.webp');
+      downloadBlob(current.transparentBlob || await (async () => {
+        // Fallback if not already fetched (shouldn't happen with auto-fetch but good for safety)
+        const res = await getTransparentVideo(current.taskId!, signal);
+        return res.blob;
+      })(), 'sticker_transparent.webp');
       toast.success('Transparent version downloaded!');
     } catch (error) {
       if (signal.aborted) return;
@@ -391,11 +422,12 @@ export default function Index() {
           <div className="p-5 rounded-xl border bg-card shadow-xs">
             <PreviewArea
               previewUrl={tabResults[getCurrentResultKey()].url}
+              transparentPreviewUrl={activeTab === 'premium' ? tabResults['premium_premium']?.transparentUrl : null}
               previewType={activeTab === 'premium' ? 'video' : 'image'}
               isLoading={isLoading}
               loadingMessage={loadingMessage}
               onDownload={tabResults[getCurrentResultKey()].blob ? handleDownload : undefined}
-              onDownloadTransparent={tabResults[getCurrentResultKey()].taskId ? handleDownloadTransparent : undefined}
+              onDownloadTransparent={(tabResults[getCurrentResultKey()].taskId || tabResults['premium_premium']?.transparentBlob) ? handleDownloadTransparent : undefined}
               taskId={tabResults[getCurrentResultKey()].taskId}
             />
           </div>

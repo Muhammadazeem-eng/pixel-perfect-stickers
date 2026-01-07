@@ -26,6 +26,7 @@ interface PreviewAreaProps {
 
 export function PreviewArea({
   previewUrl,
+  transparentPreviewUrl,
   previewType,
   isLoading,
   loadingMessage = "Generating...",
@@ -33,8 +34,17 @@ export function PreviewArea({
   onDownloadTransparent,
   taskId,
   downloadFilename = "sticker.webp",
-}: PreviewAreaProps) {
+}: PreviewAreaProps & { transparentPreviewUrl?: string | null }) {
   const [progressStep, setProgressStep] = useState(0);
+  const [viewMode, setViewMode] = useState<'original' | 'transparent'>('original');
+
+  // Auto-switch to transparent when it becomes available if original is already showing
+  useEffect(() => {
+    if (transparentPreviewUrl && previewType === 'video') {
+      // Optional: could auto-switch, but maybe better to let user choose.
+      // Let's just default to original, user can switch.
+    }
+  }, [transparentPreviewUrl, previewType]);
 
   useEffect(() => {
     if (!isLoading) {
@@ -54,21 +64,50 @@ export function PreviewArea({
 
     return () => clearInterval(interval);
   }, [isLoading]);
+
+  const showTransparent = viewMode === 'transparent' && transparentPreviewUrl;
+  const activeUrl = showTransparent ? transparentPreviewUrl : previewUrl;
+
   return (
     <div className="flex flex-col gap-4 h-full">
       <div className="flex items-center justify-between">
         <h3 className="font-semibold text-sm">Preview</h3>
         {previewUrl && !isLoading && (
           <div className="flex items-center gap-2">
+
+            {/* View Mode Toggles for Video */}
+            {previewType === 'video' && transparentPreviewUrl && (
+              <div className="flex bg-secondary/50 rounded-lg p-0.5 mr-2">
+                <button
+                  onClick={() => setViewMode('original')}
+                  className={cn(
+                    "px-2 py-1 text-[10px] rounded-md transition-all",
+                    viewMode === 'original' ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  Original
+                </button>
+                <button
+                  onClick={() => setViewMode('transparent')}
+                  className={cn(
+                    "px-2 py-1 text-[10px] rounded-md transition-all",
+                    viewMode === 'transparent' ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  Transparent
+                </button>
+              </div>
+            )}
+
             {onDownload && (
               <Button type="button" variant="outline" size="xs" className="h-7 text-[10px] px-2" onClick={onDownload}>
-                <Download className="h-3 w-3" />
+                <Download className="h-3 w-3 mr-1" />
                 {previewType === 'video' ? 'MP4' : 'WebP'}
               </Button>
             )}
-            {taskId && onDownloadTransparent && (
-              <Button type="button" variant="default" size="xs" className="h-7 text-[10px] px-2" onClick={onDownloadTransparent}>
-                <Download className="h-3 w-3" />
+            {(taskId || onDownloadTransparent) && (
+              <Button type="button" variant="default" size="xs" className="h-7 text-[10px] px-2" onClick={onDownloadTransparent} disabled={!onDownloadTransparent}>
+                <Download className="h-3 w-3 mr-1" />
                 Trans WebP
               </Button>
             )}
@@ -79,7 +118,7 @@ export function PreviewArea({
       <div className={cn(
         "relative flex-1 min-h-[300px] rounded-xl border overflow-hidden",
         "flex items-center justify-center",
-        previewUrl ? "checkered-bg" : "bg-muted/30"
+        activeUrl ? "checkered-bg" : "bg-muted/30"
       )}>
         {isLoading ? (
           <div className="relative w-full h-full">
@@ -93,10 +132,10 @@ export function PreviewArea({
               </p>
             </div>
           </div>
-        ) : previewUrl ? (
-          previewType === 'video' ? (
+        ) : activeUrl ? (
+          (previewType === 'video' && viewMode === 'original') ? (
             <video
-              src={previewUrl}
+              src={activeUrl}
               controls
               autoPlay
               loop
@@ -108,7 +147,7 @@ export function PreviewArea({
               <CardBody className="flex items-center justify-center p-0">
                 <CardItem translateZ="100" className="flex items-center justify-center">
                   <img
-                    src={previewUrl}
+                    src={activeUrl}
                     alt="Generated sticker preview"
                     className="max-w-[280px] max-h-[280px] md:max-w-full md:max-h-full object-contain animate-fade-in shadow-2xl rounded-xl"
                   />
