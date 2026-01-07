@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { Clock, Trash2, Sticker, Film, Video, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { HistoryItem, clearHistory, downloadBlob, getTransparentVideo } from "@/lib/api";
@@ -16,12 +17,17 @@ const typeIcons = {
 };
 
 export function HistorySection({ history, onRefresh }: HistorySectionProps) {
+  const downloadingRef = useRef<Set<string>>(new Set());
+
   const handleClear = () => {
     clearHistory();
     onRefresh();
   };
 
   const handleDownload = async (item: HistoryItem) => {
+    if (downloadingRef.current.has(item.id)) return;
+    downloadingRef.current.add(item.id);
+
     try {
       const response = await fetch(item.downloadUrl);
       const blob = await response.blob();
@@ -30,11 +36,17 @@ export function HistorySection({ history, onRefresh }: HistorySectionProps) {
       toast.success('Download started!');
     } catch {
       toast.error('Failed to download. File may have expired.');
+    } finally {
+      downloadingRef.current.delete(item.id);
     }
   };
 
   const handleDownloadTransparent = async (item: HistoryItem) => {
     if (!item.taskId) return;
+    const key = `${item.id}:transparent`;
+    if (downloadingRef.current.has(key)) return;
+    downloadingRef.current.add(key);
+
     try {
       toast.info('Fetching transparent version...');
       const result = await getTransparentVideo(item.taskId);
@@ -42,6 +54,8 @@ export function HistorySection({ history, onRefresh }: HistorySectionProps) {
       toast.success('Transparent WebP downloaded!');
     } catch {
       toast.error('Failed to get transparent version. Task may have expired.');
+    } finally {
+      downloadingRef.current.delete(key);
     }
   };
 
