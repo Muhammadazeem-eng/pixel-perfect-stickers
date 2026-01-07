@@ -61,8 +61,12 @@ export default function Index() {
   }, []);
 
   const resetPreview = useCallback(() => {
-    // Cancel any in-flight request so it can't update the UI later.
+    // Invalidate any in-flight request so it can't update the UI later,
+    // even if the underlying network request can't be cancelled.
+    requestSeqRef.current += 1;
+
     abortRef.current?.abort();
+    abortRef.current = null;
 
     setPreviewUrl(null);
     setCurrentBlob(null);
