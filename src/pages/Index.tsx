@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { toast } from "sonner";
 import { Header } from "@/components/Header";
 import { TabNavigation, TabType } from "@/components/TabNavigation";
@@ -33,8 +33,27 @@ export default function Index() {
   const [taskId, setTaskId] = useState<string | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
 
+  // Prevent "stale" requests from updating UI after the user switches generators/tabs.
+  const requestSeqRef = useRef(0);
+  const abortRef = useRef<AbortController | null>(null);
+
+  const beginRequest = useCallback(() => {
+    requestSeqRef.current += 1;
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    return { requestId: requestSeqRef.current, signal: controller.signal };
+  }, []);
+
+  const isLatest = useCallback((requestId: number) => {
+    return requestId === requestSeqRef.current;
+  }, []);
+
   useEffect(() => {
     setHistory(getHistory());
+    return () => {
+      abortRef.current?.abort();
+    };
   }, []);
 
   const refreshHistory = useCallback(() => {
@@ -42,13 +61,24 @@ export default function Index() {
   }, []);
 
   const resetPreview = useCallback(() => {
+    // Cancel any in-flight request so it can't update the UI later.
+    abortRef.current?.abort();
+
     setPreviewUrl(null);
     setCurrentBlob(null);
     setTaskId(null);
     setIsLoading(false);
   }, []);
 
-  const handleResult = (result: GenerationResult, type: 'sticker' | 'animation' | 'video', subType: string, prompt: string) => {
+  const handleResult = (
+    requestId: number,
+    result: GenerationResult,
+    type: 'sticker' | 'animation' | 'video',
+    subType: string,
+    prompt: string
+  ) => {
+    if (!isLatest(requestId)) return;
+
     setPreviewUrl(result.url);
     setCurrentBlob(result.blob);
     if (result.taskId) setTaskId(result.taskId);
@@ -75,6 +105,8 @@ export default function Index() {
     animation: string,
     referenceImage?: File
   ) => {
+    const { requestId, signal } = beginRequest();
+
     setIsLoading(true);
     setLoadingMessage('Generating sticker...');
     setPreviewType('image');
@@ -82,27 +114,29 @@ export default function Index() {
 
     try {
       let result: GenerationResult;
-      
+
       switch (type) {
         case 'free':
-          result = await generateFreeSticker(prompt, animation as any);
+          result = await generateFreeSticker(prompt, animation as any, signal);
           break;
         case 'replicate':
-          result = await generateReplicateSticker(prompt, animation as any);
+          result = await generateReplicateSticker(prompt, animation as any, signal);
           break;
         case 'gemini':
-          result = await generateGeminiSticker(prompt, animation as any, referenceImage);
+          result = await generateGeminiSticker(prompt, animation as any, referenceImage, signal);
           break;
       }
 
-      handleResult(result, 'sticker', type, prompt);
+      handleResult(requestId, result, 'sticker', type, prompt);
     } catch (error) {
+      if (signal.aborted) return;
+
       console.error('Generation failed:', error);
       toast.error('Generation failed', {
         description: error instanceof Error ? error.message : 'Please try again.',
       });
     } finally {
-      setIsLoading(false);
+      if (isLatest(requestId)) setIsLoading(false);
     }
   };
 
@@ -112,6 +146,8 @@ export default function Index() {
     frames: number,
     referenceImage?: File
   ) => {
+    const { requestId, signal } = beginRequest();
+
     setIsLoading(true);
     setLoadingMessage('Generating animation...');
     setPreviewType('image');
@@ -119,37 +155,43 @@ export default function Index() {
 
     try {
       let result: GenerationResult;
-      
+
       switch (type) {
         case 'free':
-          result = await generateFreeAnimation(concept, frames);
+          result = await generateFreeAnimation(concept, frames, signal);
           break;
         case 'replicate':
-          result = await generateReplicateAnimation(concept, frames);
+          result = await generateReplicateAnimation(concept, frames, signal);
           break;
         case 'gemini':
-          result = await generateGeminiAnimation(concept, frames, referenceImage);
+          result = await generateGeminiAnimation(concept, frames, referenceImage, signal);
           break;
       }
 
-      handleResult(result, 'animation', type, concept);
+      handleResult(requestId, result, 'animation', type, concept);
     } catch (error) {
+      if (signal.aborted) return;
+
       console.error('Generation failed:', error);
       toast.error('Generation failed', {
         description: error instanceof Error ? error.message : 'Please try again.',
       });
     } finally {
-      setIsLoading(false);
+      if (isLatest(requestId)) setIsLoading(false);
     }
   };
 
   const handlePremiumGenerate = async (prompt: string) => {
+    const { requestId, signal } = beginRequest();
+
     setIsLoading(true);
     setLoadingMessage('Generating premium video... This may take 2-5 minutes');
     setPreviewType('video');
 
     try {
-      const result = await generatePremiumVideo(prompt);
+      const result = await generatePremiumVideo(prompt, signal);
+      if (!isLatest(requestId)) return;
+
       setPreviewUrl(result.url);
       setCurrentBlob(result.blob);
       if (result.taskId) setTaskId(result.taskId);
@@ -168,12 +210,14 @@ export default function Index() {
         description: 'You can now download the original MP4 or transparent WebP.',
       });
     } catch (error) {
+      if (signal.aborted) return;
+
       console.error('Generation failed:', error);
       toast.error('Generation failed', {
         description: error instanceof Error ? error.message : 'Please try again.',
       });
     } finally {
-      setIsLoading(false);
+      if (isLatest(requestId)) setIsLoading(false);
     }
   };
 
@@ -185,21 +229,27 @@ export default function Index() {
 
   const handleDownloadTransparent = async () => {
     if (!taskId) return;
-    
+
+    const { requestId, signal } = beginRequest();
+
     setIsLoading(true);
     setLoadingMessage('Fetching transparent version...');
 
     try {
-      const result = await getTransparentVideo(taskId);
+      const result = await getTransparentVideo(taskId, signal);
+      if (!isLatest(requestId)) return;
+
       downloadBlob(result.blob, 'sticker_transparent.webp');
       toast.success('Transparent version downloaded!');
     } catch (error) {
+      if (signal.aborted) return;
+
       console.error('Download failed:', error);
       toast.error('Download failed', {
         description: error instanceof Error ? error.message : 'Please try again.',
       });
     } finally {
-      setIsLoading(false);
+      if (isLatest(requestId)) setIsLoading(false);
     }
   };
 

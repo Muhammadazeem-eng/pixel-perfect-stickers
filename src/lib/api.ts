@@ -35,12 +35,14 @@ export function downloadBlob(blob: Blob, filename: string) {
 // Free Sticker Generator
 export async function generateFreeSticker(
   prompt: string,
-  animation: AnimationType = 'float'
+  animation: AnimationType = 'float',
+  signal?: AbortSignal
 ): Promise<GenerationResult> {
   const params = new URLSearchParams({ prompt, animation });
   const response = await fetch(`${API_BASE_URL}/generate-free-sticker?${params}`, {
     method: 'GET',
     headers: { accept: 'application/json' },
+    signal,
   });
 
   if (!response.ok) {
@@ -55,12 +57,14 @@ export async function generateFreeSticker(
 // Replicate Sticker Generator
 export async function generateReplicateSticker(
   prompt: string,
-  animation: ReplicateAnimationType = 'bounce'
+  animation: ReplicateAnimationType = 'bounce',
+  signal?: AbortSignal
 ): Promise<GenerationResult> {
   const params = new URLSearchParams({ prompt, animation });
   const response = await fetch(`${API_BASE_URL}/generate-replicate-sticker?${params}`, {
     method: 'GET',
     headers: { accept: 'application/json' },
+    signal,
   });
 
   if (!response.ok) {
@@ -76,7 +80,8 @@ export async function generateReplicateSticker(
 export async function generateGeminiSticker(
   prompt: string,
   animation: AnimationType = 'float',
-  referenceImage?: File
+  referenceImage?: File,
+  signal?: AbortSignal
 ): Promise<GenerationResult> {
   const formData = new FormData();
   formData.append('prompt', prompt);
@@ -89,6 +94,7 @@ export async function generateGeminiSticker(
     method: 'POST',
     headers: { accept: 'application/json' },
     body: formData,
+    signal,
   });
 
   if (!response.ok) {
@@ -103,12 +109,14 @@ export async function generateGeminiSticker(
 // Free Animation Generator
 export async function generateFreeAnimation(
   concept: string,
-  frames: number = 2
+  frames: number = 2,
+  signal?: AbortSignal
 ): Promise<GenerationResult> {
   const params = new URLSearchParams({ concept, frames: frames.toString() });
   const response = await fetch(`${API_BASE_URL}/generate-free-animation?${params}`, {
     method: 'GET',
     headers: { accept: 'application/json' },
+    signal,
   });
 
   if (!response.ok) {
@@ -123,12 +131,14 @@ export async function generateFreeAnimation(
 // Replicate Animation Generator
 export async function generateReplicateAnimation(
   concept: string,
-  frames: number = 2
+  frames: number = 2,
+  signal?: AbortSignal
 ): Promise<GenerationResult> {
   const params = new URLSearchParams({ concept, frames: frames.toString() });
   const response = await fetch(`${API_BASE_URL}/generate-replicate-animation?${params}`, {
     method: 'GET',
     headers: { accept: 'application/json' },
+    signal,
   });
 
   if (!response.ok) {
@@ -144,7 +154,8 @@ export async function generateReplicateAnimation(
 export async function generateGeminiAnimation(
   concept: string,
   frames: number = 2,
-  referenceImage?: File
+  referenceImage?: File,
+  signal?: AbortSignal
 ): Promise<GenerationResult> {
   const formData = new FormData();
   formData.append('concept', concept);
@@ -157,6 +168,7 @@ export async function generateGeminiAnimation(
     method: 'POST',
     headers: { accept: 'application/json' },
     body: formData,
+    signal,
   });
 
   if (!response.ok) {
@@ -169,7 +181,7 @@ export async function generateGeminiAnimation(
 }
 
 // Premium Video Generator - Step 1
-export async function generatePremiumVideo(prompt: string): Promise<GenerationResult> {
+export async function generatePremiumVideo(prompt: string, signal?: AbortSignal): Promise<GenerationResult> {
   const response = await fetch(`${API_BASE_URL}/generate-video-original-by-video-model`, {
     method: 'POST',
     headers: {
@@ -177,6 +189,7 @@ export async function generatePremiumVideo(prompt: string): Promise<GenerationRe
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({ prompt }),
+    signal,
   });
 
   if (!response.ok) {
@@ -190,10 +203,11 @@ export async function generatePremiumVideo(prompt: string): Promise<GenerationRe
 }
 
 // Premium Video Generator - Step 2 (Get Transparent Version)
-export async function getTransparentVideo(taskId: string): Promise<GenerationResult> {
+export async function getTransparentVideo(taskId: string, signal?: AbortSignal): Promise<GenerationResult> {
   const response = await fetch(`${API_BASE_URL}/get-transparent-video-by-video-model/${taskId}`, {
     method: 'GET',
     headers: { accept: 'application/json' },
+    signal,
   });
 
   if (!response.ok) {
