@@ -1,16 +1,16 @@
 import { useState } from "react";
-import { Video, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
 interface PremiumVideoFormProps {
+  prompt: string;
+  setPrompt: (prompt: string) => void;
   onGenerate: (prompt: string) => void;
   isLoading: boolean;
 }
 
-export function PremiumVideoForm({ onGenerate, isLoading }: PremiumVideoFormProps) {
-  const [prompt, setPrompt] = useState('');
+export function PremiumVideoForm({ prompt, setPrompt, onGenerate, isLoading }: PremiumVideoFormProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,29 +19,30 @@ export function PremiumVideoForm({ onGenerate, isLoading }: PremiumVideoFormProp
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-4">
       {/* Premium Badge */}
-      <div className="flex items-center gap-3 p-4 rounded-xl gradient-primary">
-        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-foreground/20">
-          <Star className="h-6 w-6 text-primary-foreground" />
+      <div className="flex items-center gap-3 p-3 rounded-lg border bg-secondary/30">
+        <div className="flex h-12 w-12 items-center justify-center rounded-md bg-transparent overflow-hidden">
+          <img src="/assets/premium-video-icon.png" alt="Premium" className="h-full w-full object-contain" style={{ filter: 'url(#remove-white)' }} />
         </div>
-        <div className="text-primary-foreground">
-          <h3 className="font-semibold">Premium Video Generator</h3>
-          <p className="text-sm opacity-90">Create high-quality animated videos with transparency support</p>
+        <div>
+          <h3 className="font-semibold text-sm">Premium Video Generator</h3>
+          <p className="text-xs text-muted-foreground">High-quality animated videos with transparency</p>
         </div>
       </div>
 
       {/* Prompt Input */}
       <div className="space-y-2">
-        <Label htmlFor="prompt">Video Prompt</Label>
+        <Label htmlFor="prompt" className="text-xs">Video Prompt</Label>
         <Textarea
           id="prompt"
-          placeholder="a boy turns into ice"
+          placeholder="a boy turns into ice..."
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
-          className="min-h-[120px] resize-none"
+          className="min-h-[100px] resize-none text-sm"
           required
           minLength={3}
+          disabled={isLoading}
         />
         <p className="text-xs text-muted-foreground">
           Describe the transformation or action you want to create. Be descriptive for best results.
@@ -49,24 +50,24 @@ export function PremiumVideoForm({ onGenerate, isLoading }: PremiumVideoFormProp
       </div>
 
       {/* Info Box */}
-      <div className="p-4 rounded-lg bg-secondary/50 border border-border space-y-2">
-        <p className="text-sm font-medium">How it works:</p>
-        <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
-          <li>Generate your premium video (takes 2-5 minutes)</li>
+      <div className="p-3 rounded-lg bg-secondary/50 border space-y-1.5">
+        <p className="text-xs font-medium">How it works:</p>
+        <ol className="text-[11px] text-muted-foreground space-y-0.5 list-decimal list-inside">
+          <li>Generate premium video (2-5 mins)</li>
           <li>Download the original MP4 video</li>
-          <li>Optionally download the transparent WebP version</li>
+          <li>Download transparent WebP version</li>
         </ol>
       </div>
 
       {/* Generate Button */}
       <Button
         type="submit"
-        variant="gradient"
-        size="lg"
-        className="w-full"
+        variant="default"
+        size="default"
+        className="w-full h-10"
         disabled={isLoading || prompt.trim().length < 3}
       >
-        <Video className="h-5 w-5" />
+        <img src="/assets/app-logo.png" className="h-5 w-5 mr-1" style={{ filter: 'url(#remove-white)' }} alt="Logo" />
         Generate Premium Video
       </Button>
 

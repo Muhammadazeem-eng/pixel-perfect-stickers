@@ -1,9 +1,17 @@
 import { useRef } from "react";
-import { Clock, Trash2, Sticker, Film, Video, Download } from "lucide-react";
+import { Clock, Trash2, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { HistoryItem, clearHistory, downloadBlob, getTransparentVideo } from "@/lib/api";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
+import { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { CardBody, CardContainer, CardItem } from "@/components/ui/3d-card";
 
 interface HistorySectionProps {
   history: HistoryItem[];
@@ -11,12 +19,13 @@ interface HistorySectionProps {
 }
 
 const typeIcons = {
-  sticker: Sticker,
-  animation: Film,
-  video: Video,
+  sticker: '/assets/tab-stickers.png',
+  animation: '/assets/tab-animations.png',
+  video: '/assets/video-placeholder.png',
 };
 
 export function HistorySection({ history, onRefresh }: HistorySectionProps) {
+  const [selectedItem, setSelectedItem] = useState<HistoryItem | null>(null);
   const downloadingRef = useRef<Set<string>>(new Set());
 
   const handleClear = () => {
@@ -61,7 +70,7 @@ export function HistorySection({ history, onRefresh }: HistorySectionProps) {
 
   if (history.length === 0) {
     return (
-      <div className="p-6 rounded-xl border border-border bg-card/50">
+      <div className="p-6 rounded-xl border bg-card shadow-sm">
         <div className="flex items-center gap-2 text-muted-foreground">
           <Clock className="h-5 w-5" />
           <span className="font-medium">Generation History</span>
@@ -74,16 +83,16 @@ export function HistorySection({ history, onRefresh }: HistorySectionProps) {
   }
 
   return (
-    <div className="p-6 rounded-xl border border-border bg-card/50 space-y-4">
+    <div className="p-4 rounded-xl border bg-card shadow-xs space-y-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Clock className="h-5 w-5 text-muted-foreground" />
-          <span className="font-medium">Generation History</span>
-          <span className="text-xs px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">
+          <Clock className="h-4 w-4 text-muted-foreground" />
+          <span className="font-semibold text-sm">History</span>
+          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-secondary text-muted-foreground">
             {history.length}
           </span>
         </div>
-        <Button variant="ghost" size="sm" onClick={handleClear} className="text-muted-foreground hover:text-destructive">
+        <Button type="button" variant="ghost" size="sm" onClick={handleClear} className="text-muted-foreground hover:text-destructive">
           <Trash2 className="h-4 w-4" />
           Clear
         </Button>
@@ -91,11 +100,12 @@ export function HistorySection({ history, onRefresh }: HistorySectionProps) {
 
       <div className="flex gap-3 overflow-x-auto pb-2 -mx-2 px-2">
         {history.map((item) => {
-          const Icon = typeIcons[item.type];
+          const iconPath = typeIcons[item.type];
           return (
             <div
               key={item.id}
-              className="flex-shrink-0 w-44 p-3 rounded-lg border border-border bg-card hover:border-primary/50 transition-colors group"
+              className="flex-shrink-0 w-36 p-2 rounded-lg border bg-card hover:border-primary/50 transition-colors group cursor-pointer"
+              onClick={() => setSelectedItem(item)}
             >
               <div className="aspect-square rounded-md overflow-hidden bg-secondary/50 mb-2 checkered-bg">
                 <img
@@ -105,18 +115,19 @@ export function HistorySection({ history, onRefresh }: HistorySectionProps) {
                 />
               </div>
               <div className="space-y-1.5">
-                <div className="flex items-center gap-1.5">
-                  <Icon className="h-3 w-3 text-muted-foreground" />
-                  <span className="text-xs text-muted-foreground capitalize">{item.subType}</span>
+                <div className="flex items-center gap-1">
+                  <img src={iconPath} className="h-3 w-3 object-contain opacity-70" style={{ filter: 'url(#remove-white)' }} alt={item.type} />
+                  <span className="text-[10px] text-muted-foreground capitalize">{item.subType}</span>
                 </div>
-                <p className="text-xs font-medium truncate" title={item.prompt}>
+                <p className="text-[11px] font-medium truncate" title={item.prompt}>
                   {item.prompt}
                 </p>
-                <p className="text-[10px] text-muted-foreground">
+                <p className="text-[9px] text-muted-foreground">
                   {formatDistanceToNow(item.timestamp, { addSuffix: true })}
                 </p>
                 <div className="flex gap-1 pt-1">
                   <Button
+                    type="button"
                     variant="outline"
                     size="sm"
                     className="h-6 text-[10px] px-2 flex-1"
@@ -127,7 +138,8 @@ export function HistorySection({ history, onRefresh }: HistorySectionProps) {
                   </Button>
                   {item.type === 'video' && item.taskId && (
                     <Button
-                      variant="gradient"
+                      type="button"
+                      variant="default"
                       size="sm"
                       className="h-6 text-[10px] px-2 flex-1"
                       onClick={() => handleDownloadTransparent(item)}
@@ -142,6 +154,83 @@ export function HistorySection({ history, onRefresh }: HistorySectionProps) {
           );
         })}
       </div>
+
+      <Dialog open={!!selectedItem} onOpenChange={(open) => !open && setSelectedItem(null)}>
+        <DialogContent className="max-w-md bg-transparent border-none shadow-none p-0">
+          {selectedItem && (
+            <div className="relative w-full h-full flex items-center justify-center p-6">
+              <CardContainer className="inter-var">
+                <CardBody className="bg-card relative group/card dark:hover:shadow-2xl dark:hover:shadow-emerald-500/[0.1] dark:bg-black dark:border-white/[0.2] border-black/[0.1] w-auto sm:w-[30rem] h-auto rounded-xl p-6 border">
+
+                  <CardItem
+                    translateZ="50"
+                    className="text-xl font-bold text-foreground dark:text-white"
+                  >
+                    {selectedItem.prompt}
+                  </CardItem>
+                  <CardItem
+                    as="p"
+                    translateZ="60"
+                    className="text-muted-foreground text-sm max-w-sm mt-2 dark:text-neutral-300"
+                  >
+                    {selectedItem.type.toUpperCase()} • {selectedItem.subType}
+                  </CardItem>
+                  <CardItem translateZ="100" className="w-full mt-4">
+                    <div className="aspect-square rounded-xl overflow-hidden bg-secondary/50 checkered-bg relative group-hover/card:shadow-xl">
+                      <img
+                        src={selectedItem.thumbnail}
+                        height="1000"
+                        width="1000"
+                        className="h-full w-full object-contain rounded-xl group-hover/card:shadow-xl"
+                        alt="thumbnail"
+                      />
+                    </div>
+                  </CardItem>
+                  <div className="flex justify-between items-center mt-20">
+                    <CardItem
+                      translateZ={20}
+                      as="button"
+                      className="px-4 py-2 rounded-xl text-xs font-normal dark:text-white"
+                      onClick={(e: React.MouseEvent) => {
+                        e.stopPropagation();
+                        setSelectedItem(null);
+                      }}
+                    >
+                      Close
+                    </CardItem>
+                    <div className="flex gap-2">
+                      <CardItem
+                        translateZ={20}
+                        as="button"
+                        className="px-4 py-2 rounded-xl bg-black dark:bg-white dark:text-black text-white text-xs font-bold"
+                        onClick={(e: React.MouseEvent) => {
+                          e.stopPropagation();
+                          handleDownload(selectedItem);
+                        }}
+                      >
+                        {selectedItem.type === 'video' ? 'Download MP4' : 'Download WebP'}
+                      </CardItem>
+                      {selectedItem.type === 'video' && selectedItem.taskId && (
+                        <CardItem
+                          translateZ={20}
+                          as="button"
+                          className="px-4 py-2 rounded-xl bg-secondary text-secondary-foreground text-xs font-bold border border-border"
+                          onClick={(e: React.MouseEvent) => {
+                            e.stopPropagation();
+                            handleDownloadTransparent(selectedItem);
+                          }}
+                        >
+                          Trans
+                        </CardItem>
+                      )}
+                    </div>
+                  </div>
+                </CardBody>
+              </CardContainer>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

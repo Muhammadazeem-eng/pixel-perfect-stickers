@@ -25,12 +25,42 @@ import {
 
 export default function Index() {
   const [activeTab, setActiveTab] = useState<TabType>('stickers');
+  const [selectedStickerType, setSelectedStickerType] = useState<StickerGeneratorType>('free');
+  const [selectedAnimationType, setSelectedAnimationType] = useState<AnimationGeneratorType>('free');
+
+  // Granular Input Persistence
+  const [stickerInputs, setStickerInputs] = useState<Record<StickerGeneratorType, { prompt: string, animation: string, referenceImage: File | null, imagePreview: string | null }>>({
+    free: { prompt: '', animation: 'float', referenceImage: null, imagePreview: null },
+    replicate: { prompt: '', animation: 'bounce', referenceImage: null, imagePreview: null },
+    gemini: { prompt: '', animation: 'float', referenceImage: null, imagePreview: null },
+  });
+
+  const [animationInputs, setAnimationInputs] = useState<Record<AnimationGeneratorType, { concept: string, frames: number, referenceImage: File | null, imagePreview: string | null }>>({
+    free: { concept: '', frames: 2, referenceImage: null, imagePreview: null },
+    replicate: { concept: '', frames: 2, referenceImage: null, imagePreview: null },
+    gemini: { concept: '', frames: 2, referenceImage: null, imagePreview: null },
+  });
+
+  const [premiumPrompt, setPremiumPrompt] = useState('');
+
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('Generating...');
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [previewType, setPreviewType] = useState<'image' | 'video'>('image');
-  const [currentBlob, setCurrentBlob] = useState<Blob | null>(null);
-  const [taskId, setTaskId] = useState<string | null>(null);
+
+  // Granular results for every single generator type
+  const [tabResults, setTabResults] = useState<Record<string, {
+    url: string | null;
+    blob: Blob | null;
+    taskId: string | null;
+  }>>({
+    stickers_free: { url: null, blob: null, taskId: null },
+    stickers_replicate: { url: null, blob: null, taskId: null },
+    stickers_gemini: { url: null, blob: null, taskId: null },
+    animations_free: { url: null, blob: null, taskId: null },
+    animations_replicate: { url: null, blob: null, taskId: null },
+    animations_gemini: { url: null, blob: null, taskId: null },
+    premium_premium: { url: null, blob: null, taskId: null },
+  });
+
   const [history, setHistory] = useState<HistoryItem[]>([]);
 
   // Prevent "stale" requests from updating UI after the user switches generators/tabs.
@@ -61,16 +91,16 @@ export default function Index() {
   }, []);
 
   const resetPreview = useCallback(() => {
-    // Invalidate any in-flight request so it can't update the UI later,
-    // even if the underlying network request can't be cancelled.
+    // Invalidate any in-flight request
+    console.log('[DEBUG] resetPreview called');
     requestSeqRef.current += 1;
 
-    abortRef.current?.abort();
-    abortRef.current = null;
+    if (abortRef.current) {
+      abortRef.current.abort();
+      abortRef.current = null;
+    }
 
-    setPreviewUrl(null);
-    setCurrentBlob(null);
-    setTaskId(null);
+    // Clear only the current tab's result if needed, but usually we just want to stop loading
     setIsLoading(false);
   }, []);
 
@@ -83,9 +113,16 @@ export default function Index() {
   ) => {
     if (!isLatest(requestId)) return;
 
-    setPreviewUrl(result.url);
-    setCurrentBlob(result.blob);
-    if (result.taskId) setTaskId(result.taskId);
+    const resultKey = type === 'video' ? 'premium_premium' : `${type}s_${subType}`;
+
+    setTabResults(prev => ({
+      ...prev,
+      [resultKey]: {
+        url: result.url,
+        blob: result.blob,
+        taskId: result.taskId || null
+      }
+    }));
 
     // Add to history
     addToHistory({
@@ -110,11 +147,18 @@ export default function Index() {
     referenceImage?: File
   ) => {
     const { requestId, signal } = beginRequest();
+    console.log('[DEBUG] handleStickerGenerate started, requestId:', requestId);
 
     setIsLoading(true);
     setLoadingMessage('Generating sticker...');
-    setPreviewType('image');
-    setTaskId(null);
+
+    const resultKey = `stickers_${type}`;
+
+    // Clear only this specific generator's result to show skeleton
+    setTabResults(prev => ({
+      ...prev,
+      [resultKey]: { url: null, blob: null, taskId: null }
+    }));
 
     try {
       let result: GenerationResult;
@@ -133,14 +177,20 @@ export default function Index() {
 
       handleResult(requestId, result, 'sticker', type, prompt);
     } catch (error) {
-      if (signal.aborted) return;
+      console.log('[DEBUG] handleStickerGenerate catch block, signal.aborted:', signal.aborted);
+      if (signal.aborted) {
+        console.log('[DEBUG] Request was aborted, returning early');
+        return;
+      }
 
       console.error('Generation failed:', error);
       toast.error('Generation failed', {
         description: error instanceof Error ? error.message : 'Please try again.',
       });
     } finally {
-      if (isLatest(requestId)) setIsLoading(false);
+      const latest = isLatest(requestId);
+      console.log('[DEBUG] handleStickerGenerate finally block, requestId:', requestId, 'isLatest:', latest);
+      if (latest) setIsLoading(false);
     }
   };
 
@@ -154,8 +204,14 @@ export default function Index() {
 
     setIsLoading(true);
     setLoadingMessage('Generating animation...');
-    setPreviewType('image');
-    setTaskId(null);
+
+    const resultKey = `animations_${type}`;
+
+    // Clear only this specific result
+    setTabResults(prev => ({
+      ...prev,
+      [resultKey]: { url: null, blob: null, taskId: null }
+    }));
 
     try {
       let result: GenerationResult;
@@ -190,15 +246,25 @@ export default function Index() {
 
     setIsLoading(true);
     setLoadingMessage('Generating premium video... This may take 2-5 minutes');
-    setPreviewType('video');
+
+    // Clear only this specific result
+    setTabResults(prev => ({
+      ...prev,
+      premium_premium: { url: null, blob: null, taskId: null }
+    }));
 
     try {
       const result = await generatePremiumVideo(prompt, signal);
       if (!isLatest(requestId)) return;
 
-      setPreviewUrl(result.url);
-      setCurrentBlob(result.blob);
-      if (result.taskId) setTaskId(result.taskId);
+      setTabResults(prev => ({
+        ...prev,
+        premium_premium: {
+          url: result.url,
+          blob: result.blob,
+          taskId: result.taskId || null
+        }
+      }));
 
       addToHistory({
         type: 'video',
@@ -225,14 +291,24 @@ export default function Index() {
     }
   };
 
+  const getCurrentResultKey = () => {
+    if (activeTab === 'stickers') return `stickers_${selectedStickerType}`;
+    if (activeTab === 'animations') return `animations_${selectedAnimationType}`;
+    return 'premium_premium';
+  };
+
   const handleDownload = () => {
-    if (!currentBlob) return;
-    const filename = previewType === 'video' ? 'sticker_original.mp4' : 'whatsapp_sticker.webp';
-    downloadBlob(currentBlob, filename);
+    const resultKey = getCurrentResultKey();
+    const current = tabResults[resultKey];
+    if (!current.blob) return;
+    const filename = activeTab === 'premium' ? 'sticker_original.mp4' : 'whatsapp_sticker.webp';
+    downloadBlob(current.blob, filename);
   };
 
   const handleDownloadTransparent = async () => {
-    if (!taskId) return;
+    const resultKey = getCurrentResultKey();
+    const current = tabResults[resultKey];
+    if (!current.taskId) return;
 
     const { requestId, signal } = beginRequest();
 
@@ -240,7 +316,7 @@ export default function Index() {
     setLoadingMessage('Fetching transparent version...');
 
     try {
-      const result = await getTransparentVideo(taskId, signal);
+      const result = await getTransparentVideo(current.taskId, signal);
       if (!isLatest(requestId)) return;
 
       downloadBlob(result.blob, 'sticker_transparent.webp');
@@ -260,41 +336,67 @@ export default function Index() {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      
-      <main className="container px-4 md:px-6 py-6 space-y-6">
+
+      <main className="container max-w-6xl px-4 py-4 space-y-4">
         {/* Tab Navigation */}
         <div className="flex justify-center">
-          <TabNavigation activeTab={activeTab} onTabChange={(tab) => {
+          <TabNavigation activeTab={activeTab} isLoading={isLoading} onTabChange={(tab) => {
+            console.log('[DEBUG] Tab changed to:', tab);
             setActiveTab(tab);
-            resetPreview();
+            // No resetPreview here anymore, we want to retain state!
           }} />
         </div>
 
         {/* Main Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Input Form */}
-          <div className="p-6 rounded-xl border border-border bg-card/50 backdrop-blur-sm">
+          <div className="p-5 rounded-xl border bg-card shadow-xs">
             {activeTab === 'stickers' && (
-              <StickerForm onGenerate={handleStickerGenerate} isLoading={isLoading} onTypeChange={resetPreview} />
+              <StickerForm
+                isLoading={isLoading}
+                selectedType={selectedStickerType}
+                onTypeChange={setSelectedStickerType}
+                state={stickerInputs[selectedStickerType]}
+                setState={(newState) => setStickerInputs(prev => ({
+                  ...prev,
+                  [selectedStickerType]: { ...prev[selectedStickerType], ...newState }
+                }))}
+                onGenerate={handleStickerGenerate}
+              />
             )}
             {activeTab === 'animations' && (
-              <AnimationForm onGenerate={handleAnimationGenerate} isLoading={isLoading} onTypeChange={resetPreview} />
+              <AnimationForm
+                isLoading={isLoading}
+                selectedType={selectedAnimationType}
+                onTypeChange={setSelectedAnimationType}
+                state={animationInputs[selectedAnimationType]}
+                setState={(newState) => setAnimationInputs(prev => ({
+                  ...prev,
+                  [selectedAnimationType]: { ...prev[selectedAnimationType], ...newState }
+                }))}
+                onGenerate={handleAnimationGenerate}
+              />
             )}
             {activeTab === 'premium' && (
-              <PremiumVideoForm onGenerate={handlePremiumGenerate} isLoading={isLoading} />
+              <PremiumVideoForm
+                prompt={premiumPrompt}
+                setPrompt={setPremiumPrompt}
+                onGenerate={handlePremiumGenerate}
+                isLoading={isLoading}
+              />
             )}
           </div>
 
           {/* Preview Area */}
-          <div className="p-6 rounded-xl border border-border bg-card/50 backdrop-blur-sm">
+          <div className="p-5 rounded-xl border bg-card shadow-xs">
             <PreviewArea
-              previewUrl={previewUrl}
-              previewType={previewType}
+              previewUrl={tabResults[getCurrentResultKey()].url}
+              previewType={activeTab === 'premium' ? 'video' : 'image'}
               isLoading={isLoading}
               loadingMessage={loadingMessage}
-              onDownload={currentBlob ? handleDownload : undefined}
-              onDownloadTransparent={taskId ? handleDownloadTransparent : undefined}
-              taskId={taskId}
+              onDownload={tabResults[getCurrentResultKey()].blob ? handleDownload : undefined}
+              onDownloadTransparent={tabResults[getCurrentResultKey()].taskId ? handleDownloadTransparent : undefined}
+              taskId={tabResults[getCurrentResultKey()].taskId}
             />
           </div>
         </div>

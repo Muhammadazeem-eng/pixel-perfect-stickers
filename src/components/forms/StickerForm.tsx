@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Sparkles, Wand2, Bot, Upload, X } from "lucide-react";
+import { Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,42 +10,39 @@ import { AnimationType, ReplicateAnimationType } from "@/lib/api";
 export type StickerGeneratorType = 'free' | 'replicate' | 'gemini';
 
 interface StickerFormProps {
+  selectedType: StickerGeneratorType;
+  onTypeChange: (type: StickerGeneratorType) => void;
+  state: { prompt: string; animation: string; referenceImage: File | null; imagePreview: string | null };
+  setState: (state: Partial<{ prompt: string; animation: string; referenceImage: File | null; imagePreview: string | null }>) => void;
   onGenerate: (type: StickerGeneratorType, prompt: string, animation: string, referenceImage?: File) => void;
   isLoading: boolean;
-  onTypeChange?: () => void;
 }
 
 const generators = [
-  { id: 'free' as const, title: 'Free Sticker', description: 'Powered by Flux Model', icon: Sparkles, badge: 'FREE' },
-  { id: 'replicate' as const, title: 'Replicate Sticker', description: 'High quality generation', icon: Wand2 },
-  { id: 'gemini' as const, title: 'Gemini Sticker', description: 'With optional image reference', icon: Bot },
+  { id: 'free' as const, title: 'Free Sticker', description: 'Powered by Flux Model', iconImage: '/assets/free-icon.png', badge: 'FREE' },
+  { id: 'replicate' as const, title: 'Replicate Sticker', description: 'High quality generation', iconImage: '/assets/replicate-icon.png' },
+  { id: 'gemini' as const, title: 'Gemini Sticker', description: 'With optional image reference', iconImage: '/assets/gemini-icon.png' },
 ];
 
 const freeAnimations: AnimationType[] = ['float', 'bounce', 'pulse', 'wiggle', 'static'];
 const replicateAnimations: ReplicateAnimationType[] = ['bounce', 'shake', 'pulse', 'wiggle', 'static'];
 
-export function StickerForm({ onGenerate, isLoading, onTypeChange }: StickerFormProps) {
-  const [selectedType, setSelectedType] = useState<StickerGeneratorType>('free');
-  const [prompt, setPrompt] = useState('');
-  const [animation, setAnimation] = useState('float');
-  const [referenceImage, setReferenceImage] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+export function StickerForm({ selectedType, onTypeChange, state, setState, onGenerate, isLoading }: StickerFormProps) {
+  const { prompt, animation, referenceImage, imagePreview } = state;
 
   const animations = selectedType === 'replicate' ? replicateAnimations : freeAnimations;
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setReferenceImage(file);
       const reader = new FileReader();
-      reader.onloadend = () => setImagePreview(reader.result as string);
+      reader.onloadend = () => setState({ referenceImage: file, imagePreview: reader.result as string });
       reader.readAsDataURL(file);
     }
   };
 
   const clearImage = () => {
-    setReferenceImage(null);
-    setImagePreview(null);
+    setState({ referenceImage: null, imagePreview: null });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -55,22 +52,22 @@ export function StickerForm({ onGenerate, isLoading, onTypeChange }: StickerForm
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-4">
       {/* Generator Selection */}
-      <div className="space-y-3">
-        <Label>Generator Type</Label>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="space-y-2">
+        <Label className="text-xs">Generator Type</Label>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           {generators.map((gen) => (
             <GeneratorCard
               key={gen.id}
               title={gen.title}
               description={gen.description}
-              icon={gen.icon}
+              iconImage={gen.iconImage}
               isSelected={selectedType === gen.id}
+              disabled={isLoading}
               onClick={() => {
-                setSelectedType(gen.id);
-                setAnimation(gen.id === 'replicate' ? 'bounce' : 'float');
-                onTypeChange?.();
+                onTypeChange(gen.id);
+                setState({ animation: gen.id === 'replicate' ? 'bounce' : 'float' });
               }}
               badge={gen.badge}
             />
@@ -80,29 +77,30 @@ export function StickerForm({ onGenerate, isLoading, onTypeChange }: StickerForm
 
       {/* Prompt Input */}
       <div className="space-y-2">
-        <Label htmlFor="prompt">Prompt</Label>
+        <Label htmlFor="prompt" className="text-xs">Prompt</Label>
         <Input
           id="prompt"
-          placeholder="a person is going to school"
+          placeholder="a person is going to school..."
           value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          className="h-11"
+          onChange={(e) => setState({ prompt: e.target.value })}
+          className="h-9 text-sm"
           required
           minLength={3}
+          disabled={isLoading}
         />
         <p className="text-xs text-muted-foreground">Describe what you want your sticker to show</p>
       </div>
 
       {/* Animation Selection */}
-      <div className="space-y-2">
-        <Label htmlFor="animation">Animation Style</Label>
-        <Select value={animation} onValueChange={setAnimation}>
-          <SelectTrigger id="animation" className="h-11">
+      <div className="space-y-1.5">
+        <Label htmlFor="animation" className="text-xs">Animation Style</Label>
+        <Select value={animation} onValueChange={(val) => setState({ animation: val })} disabled={isLoading}>
+          <SelectTrigger id="animation" className="h-9 text-sm">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             {animations.map((anim) => (
-              <SelectItem key={anim} value={anim} className="capitalize">
+              <SelectItem key={anim} value={anim} className="capitalize text-sm">
                 {anim}
               </SelectItem>
             ))}
@@ -143,12 +141,12 @@ export function StickerForm({ onGenerate, isLoading, onTypeChange }: StickerForm
       {/* Generate Button */}
       <Button
         type="submit"
-        variant="gradient"
-        size="lg"
-        className="w-full"
+        variant="default"
+        size="default"
+        className="w-full h-10"
         disabled={isLoading || prompt.trim().length < 3}
       >
-        <Sparkles className="h-5 w-5" />
+        <img src="/assets/app-logo.png" className="h-5 w-5 mr-1" alt="Logo" />
         Generate {generators.find(g => g.id === selectedType)?.title}
       </Button>
     </form>

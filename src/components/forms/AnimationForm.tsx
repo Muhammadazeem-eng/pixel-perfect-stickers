@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Sparkles, Wand2, Bot, Upload, X } from "lucide-react";
+import { Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,23 +9,22 @@ import { GeneratorCard } from "@/components/GeneratorCard";
 export type AnimationGeneratorType = 'free' | 'replicate' | 'gemini';
 
 interface AnimationFormProps {
+  selectedType: AnimationGeneratorType;
+  onTypeChange: (type: AnimationGeneratorType) => void;
+  state: { concept: string; frames: number; referenceImage: File | null; imagePreview: string | null };
+  setState: (state: Partial<{ concept: string; frames: number; referenceImage: File | null; imagePreview: string | null }>) => void;
   onGenerate: (type: AnimationGeneratorType, concept: string, frames: number, referenceImage?: File) => void;
   isLoading: boolean;
-  onTypeChange?: () => void;
 }
 
 const generators = [
-  { id: 'free' as const, title: 'Free Animation', description: 'Quick & free generation', icon: Sparkles, badge: 'FREE', maxFrames: 6 },
-  { id: 'replicate' as const, title: 'Replicate Animation', description: 'High quality frames', icon: Wand2, maxFrames: 6 },
-  { id: 'gemini' as const, title: 'Gemini Animation', description: 'With optional image reference', icon: Bot, maxFrames: 4 },
+  { id: 'free' as const, title: 'Free Animation', description: 'Quick & free generation', iconImage: '/assets/free-anim-icon.png', badge: 'FREE', maxFrames: 6 },
+  { id: 'replicate' as const, title: 'Replicate Animation', description: 'High quality frames', iconImage: '/assets/replicate-anim-icon.png', maxFrames: 6 },
+  { id: 'gemini' as const, title: 'Gemini Animation', description: 'With optional image reference', iconImage: '/assets/gemini-anim-icon.png', maxFrames: 4 },
 ];
 
-export function AnimationForm({ onGenerate, isLoading, onTypeChange }: AnimationFormProps) {
-  const [selectedType, setSelectedType] = useState<AnimationGeneratorType>('free');
-  const [concept, setConcept] = useState('');
-  const [frames, setFrames] = useState(2);
-  const [referenceImage, setReferenceImage] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+export function AnimationForm({ selectedType, onTypeChange, state, setState, onGenerate, isLoading }: AnimationFormProps) {
+  const { concept, frames, referenceImage, imagePreview } = state;
 
   const currentGenerator = generators.find(g => g.id === selectedType)!;
   const maxFrames = currentGenerator.maxFrames;
@@ -33,16 +32,14 @@ export function AnimationForm({ onGenerate, isLoading, onTypeChange }: Animation
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setReferenceImage(file);
       const reader = new FileReader();
-      reader.onloadend = () => setImagePreview(reader.result as string);
+      reader.onloadend = () => setState({ referenceImage: file, imagePreview: reader.result as string });
       reader.readAsDataURL(file);
     }
   };
 
   const clearImage = () => {
-    setReferenceImage(null);
-    setImagePreview(null);
+    setState({ referenceImage: null, imagePreview: null });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -52,22 +49,22 @@ export function AnimationForm({ onGenerate, isLoading, onTypeChange }: Animation
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-4">
       {/* Generator Selection */}
-      <div className="space-y-3">
-        <Label>Generator Type</Label>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="space-y-2">
+        <Label className="text-xs">Generator Type</Label>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           {generators.map((gen) => (
             <GeneratorCard
               key={gen.id}
               title={gen.title}
               description={gen.description}
-              icon={gen.icon}
+              iconImage={gen.iconImage}
               isSelected={selectedType === gen.id}
+              disabled={isLoading}
               onClick={() => {
-                setSelectedType(gen.id);
-                if (frames > gen.maxFrames) setFrames(gen.maxFrames);
-                onTypeChange?.();
+                onTypeChange(gen.id);
+                if (frames > gen.maxFrames) setState({ frames: gen.maxFrames });
               }}
               badge={gen.badge}
             />
@@ -77,15 +74,16 @@ export function AnimationForm({ onGenerate, isLoading, onTypeChange }: Animation
 
       {/* Concept Input */}
       <div className="space-y-2">
-        <Label htmlFor="concept">Animation Concept</Label>
+        <Label htmlFor="concept" className="text-xs">Animation Concept</Label>
         <Input
           id="concept"
-          placeholder="teacher beat the student"
+          placeholder="teacher beat the student..."
           value={concept}
-          onChange={(e) => setConcept(e.target.value)}
-          className="h-11"
+          onChange={(e) => setState({ concept: e.target.value })}
+          className="h-9 text-sm"
           required
           minLength={3}
+          disabled={isLoading}
         />
         <p className="text-xs text-muted-foreground">Describe the action or transformation you want to animate</p>
       </div>
@@ -93,19 +91,20 @@ export function AnimationForm({ onGenerate, isLoading, onTypeChange }: Animation
       {/* Frames Slider */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <Label htmlFor="frames">Number of Frames</Label>
-          <span className="text-sm font-medium px-2 py-1 rounded-md bg-primary/10 text-primary">
+          <Label htmlFor="frames" className="text-xs">Number of Frames</Label>
+          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-primary/10 text-primary">
             {frames} frames
           </span>
         </div>
         <Slider
           id="frames"
           value={[frames]}
-          onValueChange={([value]) => setFrames(value)}
+          onValueChange={([value]) => setState({ frames: value })}
           min={2}
           max={maxFrames}
           step={1}
           className="w-full"
+          disabled={isLoading}
         />
         <div className="flex justify-between text-xs text-muted-foreground">
           <span>2 frames</span>
@@ -146,12 +145,12 @@ export function AnimationForm({ onGenerate, isLoading, onTypeChange }: Animation
       {/* Generate Button */}
       <Button
         type="submit"
-        variant="gradient"
-        size="lg"
-        className="w-full"
+        variant="default"
+        size="default"
+        className="w-full h-10"
         disabled={isLoading || concept.trim().length < 3}
       >
-        <Sparkles className="h-5 w-5" />
+        <img src="/assets/app-logo.png" className="h-5 w-5 mr-1" style={{ filter: 'url(#remove-white)' }} alt="Logo" />
         Generate {currentGenerator.title}
       </Button>
     </form>
