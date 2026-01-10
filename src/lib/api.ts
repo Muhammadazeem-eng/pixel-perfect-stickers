@@ -183,8 +183,7 @@ export async function generateGeminiAnimation(
 // Image Generator
 export async function generateImage(
   prompt: string,
-  width: number,
-  height: number,
+  aspect_ratio: string,
   signal?: AbortSignal
 ): Promise<GenerationResult> {
   const response = await fetch(`${API_BASE_URL}/image/generate-image`, {
@@ -193,7 +192,7 @@ export async function generateImage(
       accept: 'application/json',
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ prompt, width, height }),
+    body: JSON.stringify({ prompt, aspect_ratio }),
     signal,
   });
 
@@ -226,6 +225,32 @@ export async function generatePremiumVideo(prompt: string, duration: number = 3,
   const blob = await response.blob();
   const url = window.URL.createObjectURL(blob);
   return { blob, url, taskId };
+}
+
+// Video Only Generator
+export async function generateVideoOnly(
+  prompt: string,
+  duration: number,
+  aspect_ratio: string,
+  signal?: AbortSignal
+): Promise<GenerationResult> {
+  const response = await fetch(`${API_BASE_URL}/generate-video-only`, {
+    method: 'POST',
+    headers: {
+      accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ prompt, duration, aspect_ratio }),
+    signal,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to generate video: ${response.statusText}`);
+  }
+
+  const blob = await response.blob();
+  const url = window.URL.createObjectURL(blob);
+  return { blob, url };
 }
 
 // Premium Video Generator - Step 2 (Get Transparent Version)
