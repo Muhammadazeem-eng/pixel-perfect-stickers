@@ -6,7 +6,7 @@ import { PreviewArea } from "@/components/PreviewArea";
 import { HistorySection } from "@/components/HistorySection";
 import { StickerForm, StickerGeneratorType } from "@/components/forms/StickerForm";
 import { AnimationForm, AnimationGeneratorType } from "@/components/forms/AnimationForm";
-import { PremiumVideoForm } from "@/components/forms/PremiumVideoForm";
+import { PremiumVideoForm, PremiumMode } from "@/components/forms/PremiumVideoForm";
 import { ImageGenerationForm } from "@/components/forms/ImageGenerationForm";
 import {
   generateFreeSticker,
@@ -16,6 +16,7 @@ import {
   generateReplicateAnimation,
   generateGeminiAnimation,
   generatePremiumVideo,
+  generateVideoOnly,
   getTransparentVideo,
   generateImage,
   downloadBlob,
@@ -45,11 +46,12 @@ export default function Index() {
 
   const [premiumPrompt, setPremiumPrompt] = useState('');
   const [premiumDuration, setPremiumDuration] = useState(3);
+  const [premiumMode, setPremiumMode] = useState<PremiumMode>('sticker');
+  const [premiumAspectRatio, setPremiumAspectRatio] = useState('16:9_480p');
 
   const [imageInputs, setImageInputs] = useState({
     prompt: '',
-    width: 512,
-    height: 512,
+    aspectRatio: '1:1',
   });
 
 
@@ -258,20 +260,30 @@ export default function Index() {
     }
   };
 
-  const handlePremiumGenerate = async (prompt: string, duration: number) => {
+  const handlePremiumGenerate = async (prompt: string, duration: number, mode: PremiumMode, aspectRatio: string) => {
     const { requestId, signal } = beginRequest();
 
     setIsLoading(true);
-    setLoadingMessage('Generating premium video... This may take 2-5 minutes');
+    setLoadingMessage(mode === 'sticker'
+      ? 'Generating premium sticker... This takes 2-5 minutes'
+      : 'Generating background video... This takes 2-5 minutes'
+    );
 
     // Clear only this specific result
     setTabResults(prev => ({
       ...prev,
-      premium_premium: { url: null, blob: null, taskId: null }
+      premium_premium: { url: null, blob: null, taskId: null, transparentUrl: null, transparentBlob: null }
     }));
 
     try {
-      const result = await generatePremiumVideo(prompt, duration, signal);
+      let result: GenerationResult;
+
+      if (mode === 'sticker') {
+        result = await generatePremiumVideo(prompt, duration, signal);
+      } else {
+        result = await generateVideoOnly(prompt, duration, aspectRatio, signal);
+      }
+
       if (!isLatest(requestId)) return;
 
       setTabResults(prev => ({
@@ -285,8 +297,8 @@ export default function Index() {
         }
       }));
 
-      // Automatically fetch transparent version
-      if (result.taskId) {
+      // Automatically fetch transparent version ONLY for sticker mode
+      if (mode === 'sticker' && result.taskId) {
         setLoadingMessage('Generating transparent version...');
         try {
           const transResult = await getTransparentVideo(result.taskId, signal);
@@ -309,7 +321,7 @@ export default function Index() {
 
       addToHistory({
         type: 'video',
-        subType: 'premium',
+        subType: mode === 'sticker' ? 'premium_sticker' : 'premium_video',
         prompt,
         thumbnail: result.url,
         downloadUrl: result.url,
@@ -318,7 +330,7 @@ export default function Index() {
       refreshHistory();
 
       toast.success('Video generated!', {
-        description: 'You can now download the original MP4 or transparent WebP.',
+        description: 'Your creation is ready to download.',
       });
     } catch (error) {
       if (signal.aborted) return;
@@ -332,7 +344,7 @@ export default function Index() {
     }
   };
 
-  const handleImageGenerate = async (prompt: string, width: number, height: number) => {
+  const handleImageGenerate = async (prompt: string, aspectRatio: string) => {
     const { requestId, signal } = beginRequest();
 
     setIsLoading(true);
@@ -345,7 +357,7 @@ export default function Index() {
     }));
 
     try {
-      const result = await generateImage(prompt, width, height, signal);
+      const result = await generateImage(prompt, aspectRatio, signal);
 
       handleResult(requestId, result, 'image', 'gen', prompt);
 
@@ -463,6 +475,10 @@ export default function Index() {
                 setPrompt={setPremiumPrompt}
                 duration={premiumDuration}
                 setDuration={setPremiumDuration}
+                mode={premiumMode}
+                setMode={setPremiumMode}
+                aspectRatio={premiumAspectRatio}
+                setAspectRatio={setPremiumAspectRatio}
                 onGenerate={handlePremiumGenerate}
                 isLoading={isLoading}
               />
@@ -471,10 +487,8 @@ export default function Index() {
               <ImageGenerationForm
                 prompt={imageInputs.prompt}
                 setPrompt={(val) => setImageInputs(prev => ({ ...prev, prompt: val }))}
-                width={imageInputs.width}
-                setWidth={(val) => setImageInputs(prev => ({ ...prev, width: val }))}
-                height={imageInputs.height}
-                setHeight={(val) => setImageInputs(prev => ({ ...prev, height: val }))}
+                aspectRatio={imageInputs.aspectRatio}
+                setAspectRatio={(val) => setImageInputs(prev => ({ ...prev, aspectRatio: val }))}
                 onGenerate={handleImageGenerate}
                 isLoading={isLoading}
               />
