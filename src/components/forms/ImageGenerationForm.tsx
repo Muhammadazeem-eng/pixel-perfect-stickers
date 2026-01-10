@@ -1,27 +1,32 @@
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Slider } from "@/components/ui/slider";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 
 interface ImageGenerationFormProps {
     prompt: string;
     setPrompt: (prompt: string) => void;
-    width: number;
-    setWidth: (width: number) => void;
-    height: number;
-    setHeight: (height: number) => void;
-    onGenerate: (prompt: string, width: number, height: number) => void;
+    aspectRatio: string;
+    setAspectRatio: (ratio: string) => void;
+    onGenerate: (prompt: string, aspectRatio: string) => void;
     isLoading: boolean;
 }
+
+const ASPECT_RATIOS = [
+    "1:1", "16:9", "9:16", "4:3", "3:4", "21:9", "2:3", "3:2"
+];
 
 export function ImageGenerationForm({
     prompt,
     setPrompt,
-    width,
-    setWidth,
-    height,
-    setHeight,
+    aspectRatio,
+    setAspectRatio,
     onGenerate,
     isLoading
 }: ImageGenerationFormProps) {
@@ -29,7 +34,7 @@ export function ImageGenerationForm({
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (prompt.trim().length < 3) return;
-        onGenerate(prompt, width, height);
+        onGenerate(prompt, aspectRatio);
     };
 
     return (
@@ -61,60 +66,21 @@ export function ImageGenerationForm({
                 />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-                {/* Width Slider */}
-                <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                        <Label htmlFor="width" className="text-xs">Width</Label>
-                        <div className="flex items-center gap-1">
-                            <Input
-                                type="number"
-                                value={width}
-                                onChange={(e) => setWidth(Number(e.target.value))}
-                                className="h-6 w-16 text-xs px-1.5 py-0.5 rounded-md bg-primary/10 border-primary/20 text-primary font-medium text-center focus-visible:ring-1 focus-visible:ring-primary/30"
-                                disabled={isLoading}
-                            />
-                            <span className="text-[10px] text-muted-foreground font-medium">px</span>
-                        </div>
-                    </div>
-                    <Slider
-                        id="width"
-                        value={[width]}
-                        onValueChange={([value]) => setWidth(value)}
-                        min={256}
-                        max={1024}
-                        step={64}
-                        className="w-full"
-                        disabled={isLoading}
-                    />
-                </div>
-
-                {/* Height Slider */}
-                <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                        <Label htmlFor="height" className="text-xs">Height</Label>
-                        <div className="flex items-center gap-1">
-                            <Input
-                                type="number"
-                                value={height}
-                                onChange={(e) => setHeight(Number(e.target.value))}
-                                className="h-6 w-16 text-xs px-1.5 py-0.5 rounded-md bg-primary/10 border-primary/20 text-primary font-medium text-center focus-visible:ring-1 focus-visible:ring-primary/30"
-                                disabled={isLoading}
-                            />
-                            <span className="text-[10px] text-muted-foreground font-medium">px</span>
-                        </div>
-                    </div>
-                    <Slider
-                        id="height"
-                        value={[height]}
-                        onValueChange={([value]) => setHeight(value)}
-                        min={256}
-                        max={1024}
-                        step={64}
-                        className="w-full"
-                        disabled={isLoading}
-                    />
-                </div>
+            {/* Aspect Ratio Select */}
+            <div className="space-y-2">
+                <Label className="text-xs">Aspect Ratio</Label>
+                <Select value={aspectRatio} onValueChange={setAspectRatio} disabled={isLoading}>
+                    <SelectTrigger className="w-full h-9 text-sm">
+                        <SelectValue placeholder="Select ratio" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {ASPECT_RATIOS.map((ratio) => (
+                            <SelectItem key={ratio} value={ratio}>
+                                {ratio}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
             </div>
 
             {/* Generate Button */}
