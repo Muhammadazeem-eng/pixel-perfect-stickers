@@ -1,21 +1,23 @@
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Slider } from "@/components/ui/slider";
 
 interface PremiumVideoFormProps {
   prompt: string;
   setPrompt: (prompt: string) => void;
-  onGenerate: (prompt: string) => void;
+  duration: number;
+  setDuration: (duration: number) => void;
+  onGenerate: (prompt: string, duration: number) => void;
   isLoading: boolean;
 }
 
-export function PremiumVideoForm({ prompt, setPrompt, onGenerate, isLoading }: PremiumVideoFormProps) {
+export function PremiumVideoForm({ prompt, setPrompt, duration, setDuration, onGenerate, isLoading }: PremiumVideoFormProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (prompt.trim().length < 3) return;
-    onGenerate(prompt);
+    onGenerate(prompt, duration);
   };
 
   return (
@@ -49,11 +51,36 @@ export function PremiumVideoForm({ prompt, setPrompt, onGenerate, isLoading }: P
         </p>
       </div>
 
+
+      {/* Duration Slider */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <Label htmlFor="duration" className="text-xs">Duration (seconds)</Label>
+          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-primary/10 text-primary">
+            {duration}s
+          </span>
+        </div>
+        <Slider
+          id="duration"
+          value={[duration]}
+          onValueChange={([value]) => setDuration(value)}
+          min={1}
+          max={10}
+          step={1}
+          className="w-full"
+          disabled={isLoading}
+        />
+        <div className="flex justify-between text-xs text-muted-foreground">
+          <span>1s</span>
+          <span>10s</span>
+        </div>
+      </div>
+
       {/* Info Box */}
       <div className="p-3 rounded-lg bg-secondary/50 border space-y-1.5">
         <p className="text-xs font-medium">How it works:</p>
         <ol className="text-[11px] text-muted-foreground space-y-0.5 list-decimal list-inside">
-          <li>Generate premium video (2-5 mins)</li>
+          <li>Generate premium video ({duration}s)</li>
           <li>Download the original MP4 video</li>
           <li>Download transparent WebP version</li>
         </ol>

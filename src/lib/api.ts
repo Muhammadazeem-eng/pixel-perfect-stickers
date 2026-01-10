@@ -11,7 +11,7 @@ export interface GenerationResult {
 
 export interface HistoryItem {
   id: string;
-  type: 'sticker' | 'animation' | 'video';
+  type: 'sticker' | 'animation' | 'video' | 'image';
   subType: string;
   prompt: string;
   thumbnail: string;
@@ -180,15 +180,41 @@ export async function generateGeminiAnimation(
   return { blob, url };
 }
 
+// Image Generator
+export async function generateImage(
+  prompt: string,
+  width: number,
+  height: number,
+  signal?: AbortSignal
+): Promise<GenerationResult> {
+  const response = await fetch(`${API_BASE_URL}/image/generate-image`, {
+    method: 'POST',
+    headers: {
+      accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ prompt, width, height }),
+    signal,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to generate image: ${response.statusText}`);
+  }
+
+  const blob = await response.blob();
+  const url = window.URL.createObjectURL(blob);
+  return { blob, url };
+}
+
 // Premium Video Generator - Step 1
-export async function generatePremiumVideo(prompt: string, signal?: AbortSignal): Promise<GenerationResult> {
+export async function generatePremiumVideo(prompt: string, duration: number = 3, signal?: AbortSignal): Promise<GenerationResult> {
   const response = await fetch(`${API_BASE_URL}/generate-video-original-by-video-model`, {
     method: 'POST',
     headers: {
       accept: 'application/json',
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ prompt }),
+    body: JSON.stringify({ prompt, duration }),
     signal,
   });
 

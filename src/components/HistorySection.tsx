@@ -22,6 +22,7 @@ const typeIcons = {
   sticker: '/assets/tab-stickers.png',
   animation: '/assets/tab-animations.png',
   video: '/assets/video-placeholder.png',
+  image: '/assets/image-placeholder.png',
 };
 
 export function HistorySection({ history, onRefresh }: HistorySectionProps) {
@@ -40,7 +41,9 @@ export function HistorySection({ history, onRefresh }: HistorySectionProps) {
     try {
       const response = await fetch(item.downloadUrl);
       const blob = await response.blob();
-      const ext = item.type === 'video' ? 'mp4' : 'webp';
+      let ext = 'webp';
+      if (item.type === 'video') ext = 'mp4';
+      else if (item.type === 'image') ext = 'jpg';
       downloadBlob(blob, `${item.type}_${item.subType}.${ext}`);
       toast.success('Download started!');
     } catch {
@@ -148,7 +151,7 @@ export function HistorySection({ history, onRefresh }: HistorySectionProps) {
                     onClick={() => handleDownload(item)}
                   >
                     <Download className="h-3 w-3" />
-                    {item.type === 'video' ? 'MP4' : 'WebP'}
+                    {item.type === 'video' ? 'MP4' : (item.type === 'image' ? 'JPG' : 'WebP')}
                   </Button>
                   {item.type === 'video' && item.taskId && (
                     <Button
@@ -247,7 +250,7 @@ export function HistorySection({ history, onRefresh }: HistorySectionProps) {
                           handleDownload(selectedItem);
                         }}
                       >
-                        Download {selectedItem.type === 'video' ? 'MP4' : 'WebP'}
+                        Download {selectedItem.type === 'video' ? 'MP4' : (selectedItem.type === 'image' ? 'JPG' : 'WebP')}
                       </CardItem>
                     </div>
                   </div>

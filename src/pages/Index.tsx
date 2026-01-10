@@ -7,6 +7,7 @@ import { HistorySection } from "@/components/HistorySection";
 import { StickerForm, StickerGeneratorType } from "@/components/forms/StickerForm";
 import { AnimationForm, AnimationGeneratorType } from "@/components/forms/AnimationForm";
 import { PremiumVideoForm } from "@/components/forms/PremiumVideoForm";
+import { ImageGenerationForm } from "@/components/forms/ImageGenerationForm";
 import {
   generateFreeSticker,
   generateReplicateSticker,
@@ -16,6 +17,7 @@ import {
   generateGeminiAnimation,
   generatePremiumVideo,
   getTransparentVideo,
+  generateImage,
   downloadBlob,
   getHistory,
   addToHistory,
@@ -42,6 +44,14 @@ export default function Index() {
   });
 
   const [premiumPrompt, setPremiumPrompt] = useState('');
+  const [premiumDuration, setPremiumDuration] = useState(3);
+
+  const [imageInputs, setImageInputs] = useState({
+    prompt: '',
+    width: 512,
+    height: 512,
+  });
+
 
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('Generating...');
@@ -62,6 +72,7 @@ export default function Index() {
     animations_gemini: { url: null, blob: null, taskId: null },
 
     premium_premium: { url: null, blob: null, taskId: null, transparentUrl: null, transparentBlob: null },
+    image_gen: { url: null, blob: null, taskId: null },
   });
 
   const [history, setHistory] = useState<HistoryItem[]>([]);
@@ -110,13 +121,16 @@ export default function Index() {
   const handleResult = (
     requestId: number,
     result: GenerationResult,
-    type: 'sticker' | 'animation' | 'video',
+    type: 'sticker' | 'animation' | 'video' | 'image',
     subType: string,
     prompt: string
   ) => {
     if (!isLatest(requestId)) return;
 
-    const resultKey = type === 'video' ? 'premium_premium' : `${type}s_${subType}`;
+    let resultKey = '';
+    if (type === 'video') resultKey = 'premium_premium';
+    else if (type === 'image') resultKey = 'image_gen';
+    else resultKey = `${type}s_${subType}`;
 
     setTabResults(prev => ({
       ...prev,
@@ -244,7 +258,7 @@ export default function Index() {
     }
   };
 
-  const handlePremiumGenerate = async (prompt: string) => {
+  const handlePremiumGenerate = async (prompt: string, duration: number) => {
     const { requestId, signal } = beginRequest();
 
     setIsLoading(true);
@@ -257,7 +271,7 @@ export default function Index() {
     }));
 
     try {
-      const result = await generatePremiumVideo(prompt, signal);
+      const result = await generatePremiumVideo(prompt, duration, signal);
       if (!isLatest(requestId)) return;
 
       setTabResults(prev => ({
@@ -318,9 +332,40 @@ export default function Index() {
     }
   };
 
+  const handleImageGenerate = async (prompt: string, width: number, height: number) => {
+    const { requestId, signal } = beginRequest();
+
+    setIsLoading(true);
+    setLoadingMessage('Generating image...');
+
+    // Clear only this specific result
+    setTabResults(prev => ({
+      ...prev,
+      image_gen: { url: null, blob: null, taskId: null }
+    }));
+
+    try {
+      const result = await generateImage(prompt, width, height, signal);
+
+      handleResult(requestId, result, 'image', 'gen', prompt);
+
+    } catch (error) {
+      if (signal.aborted) return;
+
+      console.error('Generation failed:', error);
+      toast.error('Generation failed', {
+        description: error instanceof Error ? error.message : 'Please try again.',
+      });
+    } finally {
+      if (isLatest(requestId)) setIsLoading(false);
+    }
+  };
+
+
   const getCurrentResultKey = () => {
     if (activeTab === 'stickers') return `stickers_${selectedStickerType}`;
     if (activeTab === 'animations') return `animations_${selectedAnimationType}`;
+    if (activeTab === 'image') return 'image_gen';
     return 'premium_premium';
   };
 
@@ -328,7 +373,11 @@ export default function Index() {
     const resultKey = getCurrentResultKey();
     const current = tabResults[resultKey];
     if (!current.blob) return;
-    const filename = activeTab === 'premium' ? 'sticker_original.mp4' : 'whatsapp_sticker.webp';
+
+    let filename = 'download.webp';
+    if (activeTab === 'premium') filename = 'sticker_original.mp4';
+    else if (activeTab === 'image') filename = 'generated_image.jpg';
+
     downloadBlob(current.blob, filename);
   };
 
@@ -412,7 +461,21 @@ export default function Index() {
               <PremiumVideoForm
                 prompt={premiumPrompt}
                 setPrompt={setPremiumPrompt}
+                duration={premiumDuration}
+                setDuration={setPremiumDuration}
                 onGenerate={handlePremiumGenerate}
+                isLoading={isLoading}
+              />
+            )}
+            {activeTab === 'image' && (
+              <ImageGenerationForm
+                prompt={imageInputs.prompt}
+                setPrompt={(val) => setImageInputs(prev => ({ ...prev, prompt: val }))}
+                width={imageInputs.width}
+                setWidth={(val) => setImageInputs(prev => ({ ...prev, width: val }))}
+                height={imageInputs.height}
+                setHeight={(val) => setImageInputs(prev => ({ ...prev, height: val }))}
+                onGenerate={handleImageGenerate}
                 isLoading={isLoading}
               />
             )}
@@ -424,10 +487,11 @@ export default function Index() {
               previewUrl={tabResults[getCurrentResultKey()].url}
               transparentPreviewUrl={activeTab === 'premium' ? tabResults['premium_premium']?.transparentUrl : null}
               previewType={activeTab === 'premium' ? 'video' : 'image'}
+              downloadLabel={activeTab === 'image' ? 'JPG' : (activeTab === 'premium' ? 'MP4' : 'WebP')}
               isLoading={isLoading}
               loadingMessage={loadingMessage}
               onDownload={tabResults[getCurrentResultKey()].blob ? handleDownload : undefined}
-              onDownloadTransparent={(tabResults[getCurrentResultKey()].taskId || tabResults['premium_premium']?.transparentBlob) ? handleDownloadTransparent : undefined}
+              onDownloadTransparent={(activeTab === 'premium' && (tabResults['premium_premium'].taskId || tabResults['premium_premium']?.transparentBlob)) ? handleDownloadTransparent : undefined}
               taskId={tabResults[getCurrentResultKey()].taskId}
             />
           </div>

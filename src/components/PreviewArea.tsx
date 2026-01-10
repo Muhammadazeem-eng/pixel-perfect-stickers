@@ -22,6 +22,7 @@ interface PreviewAreaProps {
   onDownloadTransparent?: () => void;
   taskId?: string | null;
   downloadFilename?: string;
+  downloadLabel?: string;
 }
 
 export function PreviewArea({
@@ -34,6 +35,7 @@ export function PreviewArea({
   onDownloadTransparent,
   taskId,
   downloadFilename = "sticker.webp",
+  downloadLabel,
 }: PreviewAreaProps & { transparentPreviewUrl?: string | null }) {
   const [progressStep, setProgressStep] = useState(0);
   const [viewMode, setViewMode] = useState<'original' | 'transparent'>('original');
@@ -102,7 +104,7 @@ export function PreviewArea({
             {onDownload && (
               <Button type="button" variant="outline" size="xs" className="h-7 text-[10px] px-2" onClick={onDownload}>
                 <Download className="h-3 w-3 mr-1" />
-                {previewType === 'video' ? 'MP4' : 'WebP'}
+                {downloadLabel || (previewType === 'video' ? 'MP4' : 'WebP')}
               </Button>
             )}
             {(taskId || onDownloadTransparent) && (
